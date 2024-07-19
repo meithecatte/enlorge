@@ -1,5 +1,3 @@
-#[macro_use] extern crate enum_primitive;
-
 use anyhow::{anyhow, Context, Result};
 use std::fs;
 
