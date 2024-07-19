@@ -68,4 +68,10 @@ impl<B: Buf> BitReader<B> {
     pub fn get_bit(&mut self) -> bool {
         self.get_bits(1) != 0
     }
+
+    pub fn drop_align(&mut self) -> &mut B {
+        self.leftover = 0;
+        self.count = 0;
+        &mut self.bytes
+    }
 }
