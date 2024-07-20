@@ -5,6 +5,7 @@ use std::fs;
 mod deflate;
 mod gzip;
 mod helper;
+mod huffman;
 
 fn main() -> Result<()> {
     let filename = std::env::args().nth(1)
