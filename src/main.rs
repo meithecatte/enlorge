@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Context, Result};
-use bytes::BytesMut;
 use std::fs;
 
 mod deflate;
@@ -13,11 +12,7 @@ fn main() -> Result<()> {
     let data = fs::read(filename).context("while reading file")?;
 
     let mut buf: &[u8] = &data;
-    let header = gzip::read_header(&mut buf)?;
-    dbg!(header);
-
-    let mut output = BytesMut::new();
-    deflate::decompress(&mut buf, &mut output)?;
+    let output = gzip::decompress(&mut buf)?;
     dbg!(output);
     Ok(())
 }

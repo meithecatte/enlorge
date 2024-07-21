@@ -1,4 +1,5 @@
 use bytes::Buf;
+use crate::huffman::BitStream;
 use std::ffi::CString;
 
 fn strlen(data: &[u8]) -> Option<usize> {
@@ -65,13 +66,15 @@ impl<B: Buf> BitReader<B> {
         bits & ((1 << n) - 1)
     }
 
-    pub fn get_bit(&mut self) -> bool {
-        self.get_bits(1) != 0
-    }
-
     pub fn drop_align(&mut self) -> &mut B {
         self.leftover = 0;
         self.count = 0;
         &mut self.bytes
+    }
+}
+
+impl<B: Buf> BitStream for BitReader<B> {
+    fn get_bit(&mut self) -> bool {
+        self.get_bits(1) != 0
     }
 }

@@ -107,3 +107,24 @@ pub fn read_header(buf: &mut impl Buf) -> Result<GzipHeader> {
         comment,
     })
 }
+
+pub fn decompress(input: &mut impl Buf) -> Result<Vec<u8>> {
+    let header = read_header(input)?;
+    println!("{header:#?}");
+    let data = crate::deflate::decompress(input)?;
+    let crc = crc32fast::hash(&data);
+    let expected_crc = input.get_u32_le();
+    if crc != expected_crc {
+        bail!("gzip: CRC mismatch");
+    }
+
+    let expected_length = input.get_u32_le();
+
+    if data.len() as u32 != expected_length {
+        bail!("gzip: length mismatch");
+    }
+
+    dbg!(input.remaining());
+
+    Ok(data)
+}
