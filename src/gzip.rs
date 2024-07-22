@@ -124,7 +124,9 @@ pub fn decompress(input: &mut impl Buf) -> Result<Vec<u8>> {
         bail!("gzip: length mismatch");
     }
 
-    dbg!(input.remaining());
+    if input.remaining() != 0 {
+        todo!("handle multiple gzip members");
+    }
 
     Ok(data)
 }

@@ -25,7 +25,10 @@ pub fn decompress(input: &mut impl Buf) -> Result<Vec<u8>> {
             0b01 => {
                 fixed.decompress(&mut input, &mut output)?;
             }
-            0b10 => todo!("dynamic Huffman code"),
+            0b10 => {
+                let dynamic = BlockContext::dynamic(&mut input)?;
+                dynamic.decompress(&mut input, &mut output)?;
+            }
             _ => bail!("deflate: unknown block type"),
         }
 
@@ -54,6 +57,62 @@ impl BlockContext {
             main: Huffman::new(&lengths),
             dist: Huffman::new(&[5; 32]),
         }
+    }
+
+    fn dynamic<B: Buf>(input: &mut BitReader<B>) -> Result<Self> {
+        let hlit = input.get_bits(5) + 257;
+        let hdist = input.get_bits(5) + 1;
+        let hclen = input.get_bits(4) + 4;
+        let mut lengths = [0_u8; 19];
+        const ORDER: [u8; 19] = [
+            16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
+        ];
+        for &sym in ORDER.iter().take(hclen as usize) {
+            lengths[sym as usize] = input.get_bits(3) as u8;
+        }
+
+        let code_length = Huffman::new(&lengths);
+        let mut get_huffman = |count: usize| -> Result<Huffman> {
+            let mut lengths = Vec::with_capacity(count);
+            while lengths.len() < count {
+                match code_length.decode(input) {
+                    16 => {
+                        // copy the previous code length 3 - 6 times
+                        let k = input.get_bits(2) + 3;
+                        let a = *lengths.last().unwrap();
+                        for _ in 0..k {
+                            lengths.push(a);
+                        }
+                    }
+                    17 => {
+                        // repeat a code length of 0 for 3 - 10 times
+                        let k = input.get_bits(3) + 3;
+                        for _ in 0..k {
+                            lengths.push(0);
+                        }
+                    }
+                    18 => {
+                        // repeat a code length of 0 for 11 - 138 times
+                        let k = input.get_bits(7) + 11;
+                        for _ in 0..k {
+                            lengths.push(0);
+                        }
+                    }
+                    c => lengths.push(c as u8)
+                }
+            }
+
+            if lengths.len() != count {
+                bail!("invalid dynamic Huffman tree");
+            }
+
+            Ok(Huffman::new(&lengths))
+        };
+
+        let main = get_huffman(hlit as usize)?;
+        let dist = get_huffman(hdist as usize)?;
+
+        Ok(Self { main, dist })
     }
 
     fn decompress<B: Buf>(

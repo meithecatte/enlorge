@@ -25,9 +25,11 @@ impl Huffman {
         }
 
         for (sym, &len) in lengths.iter().enumerate() {
-            let len = len as usize;
-            order[positions[len] as usize] = sym as u16;
-            positions[len] += 1;
+            if len != 0 {
+                let len = len as usize;
+                order[positions[len] as usize] = sym as u16;
+                positions[len] += 1;
+            }
         }
 
         Huffman {
